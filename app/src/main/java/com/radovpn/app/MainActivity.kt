@@ -9,6 +9,8 @@ import android.webkit.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import android.widget.Toast
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : AppCompatActivity() {
 
@@ -47,8 +49,29 @@ class MainActivity : AppCompatActivity() {
             addJavascriptInterface(VpnBridge(), "AndroidVpn")
         }
         
-        setContentView(webView)
-        webView.loadUrl("file:///android_asset/index.html")
+        // Apply Android system-bar insets to the WebView.
+ViewCompat.setOnApplyWindowInsetsListener(webView) { view, insets ->
+    val systemBars = insets.getInsets(
+        WindowInsetsCompat.Type.systemBars()
+    )
+
+    view.setPadding(
+        0,
+        systemBars.top,
+        0,
+        systemBars.bottom
+    )
+
+    insets
+}
+
+webView.setBackgroundColor(android.graphics.Color.rgb(8, 8, 10))
+
+setContentView(webView)
+ViewCompat.requestApplyInsets(webView)
+
+webView.loadUrl("file:///android_asset/index.html")
+        
     }
 
     inner class VpnBridge {
