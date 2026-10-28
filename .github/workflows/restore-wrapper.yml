@@ -1,0 +1,69 @@
+
+name: Restore Gradle Wrapper
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  restore-wrapper:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Download Gradle
+        run: |
+          curl -fL https://services.gradle.org/distributions/gradle-8.10.2-bin.zip \
+            -o "$RUNNER_TEMP/gradle.zip"
+          unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP"
+
+      - name: Generate Gradle Wrapper
+        run: |
+          mkdir -p "$RUNNER_TEMP/wrapper-project"
+          cd "$RUNNER_TEMP/wrapper-project"
+
+          echo "rootProject.name = 'wrapper-project'" > settings.gradle
+          echo "tasks.register('hello')" > build.gradle
+
+          "$RUNNER_TEMP/gradle-8.10.2/bin/gradle" \
+            wrapper --gradle-version 8.10.2 --distribution-type bin
+
+          cd "$GITHUB_WORKSPACE"
+
+          cp "$RUNNER_TEMP/wrapper-project/gradlew" ./gradlew
+          cp "$RUNNER_TEMP/wrapper-project/gradlew.bat" ./gradlew.bat
+
+          mkdir -p gradle/wrapper
+
+          cp "$RUNNER_TEMP/wrapper-project/gradle/wrapper/gradle-wrapper.jar" \
+            gradle/wrapper/gradle-wrapper.jar
+
+          cp "$RUNNER_TEMP/wrapper-project/gradle/wrapper/gradle-wrapper.properties" \
+            gradle/wrapper/gradle-wrapper.properties
+
+      - name: Commit Wrapper files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add gradlew gradlew.bat \
+            gradle/wrapper/gradle-wrapper.jar \
+            gradle/wrapper/gradle-wrapper.properties
+
+          if git diff --cached --quiet; then
+            echo "No wrapper changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Restore Gradle 8.10.2 wrapper"
+          git push
